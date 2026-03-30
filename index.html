@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Подслушано Славянка</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap">
+    <style>
+        :root { --bg: #000; --card: #121212; --border: #262626; --accent: #0095f6; --text: #fff; }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; }
+        #app { max-width: 500px; margin: 0 auto; min-height: 100vh; padding-bottom: 70px; border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
+        
+        header { position: sticky; top: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(10px); padding: 15px; border-bottom: 1px solid var(--border); text-align: center; z-index: 100; }
+        .logo { font-weight: 800; font-size: 18px; letter-spacing: 1px; }
+
+        /* Посты */
+        .post { border-bottom: 1px solid var(--border); margin-bottom: 10px; }
+        .post-header { display: flex; align-items: center; padding: 10px; gap: 10px; font-weight: 600; font-size: 14px; }
+        .avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid var(--accent); }
+        .post-media { width: 100%; display: block; background: #050505; }
+        .post-info { padding: 12px; }
+        .actions { display: flex; gap: 15px; margin-bottom: 8px; font-size: 22px; }
+        .like-btn { cursor: pointer; }
+        .like-btn.active { color: #ff3040; }
+        .desc { font-size: 14px; line-height: 1.4; }
+        .desc b { margin-right: 5px; }
+
+        /* Навигация */
+        nav { position: fixed; bottom: 0; width: 100%; max-width: 500px; background: #000; border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 15px; z-index: 100; }
+        .nav-item { font-size: 24px; cursor: pointer; }
+        #admin-add { display: none; color: var(--accent); }
+
+        /* Модалки */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+        .modal-content { background: var(--card); padding: 25px; border-radius: 15px; width: 100%; max-width: 320px; text-align: center; }
+        input, textarea { width: 100%; padding: 12px; margin-top: 10px; background: #000; border: 1px solid var(--border); color: #fff; border-radius: 8px; outline: none; }
+        .btn { background: var(--accent); color: #fff; border: none; padding: 12px; width: 100%; border-radius: 8px; margin-top: 15px; font-weight: 700; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <header><div class="logo">СЛАВЯНКА CITY</div></header>
+    <div id="feed"></div>
+    <nav>
+        <div class="nav-item" onclick="location.reload()">🏠</div>
+        <div class="nav-item" id="admin-add" onclick="showM('post-m')">➕</div>
+        <div class="nav-item" onclick="showM('admin-m')" style="opacity:0.1">⚙️</div>
+    </nav>
+</div>
+
+<div class="modal" id="reg-m" style="display: flex;">
+    <div class="modal-content">
+        <h3>Добро пожаловать</h3>
+        <p style="font-size: 12px; color: #8e8e93; margin-top: 5px;">Введи имя, чтобы войти в Славянку</p>
+        <input type="text" id="reg-name" placeholder="Твое имя">
+        <button class="btn" onclick="saveUser()">Войти</button>
+    </div>
+</div>
+
+<div class="modal" id="admin-m">
+    <div class="modal-content">
+        <h3>Вход автора</h3>
+        <input type="password" id="adm-pass" placeholder="Код">
+        <button class="btn" onclick="checkAdm()">Войти</button>
+        <button class="btn" style="background:none" onclick="hideM('admin-m')">Отмена</button>
+    </div>
+</div>
+
+<div class="modal" id="post-m">
+    <div class="modal-content">
+        <h3>Новый пост</h3>
+        <textarea id="p-text" placeholder="Описание..."></textarea>
+        <input type="file" id="p-file" accept="image/*">
+        <button class="btn" id="up-btn" onclick="uploadPost()">Опубликовать</button>
+        <button class="btn" style="background:none" onclick="hideM('post-m')">Закрыть</button>
+    </div>
+</div>
+
+<script>
+    // ТУТ МЫ ИСПОЛЬЗУЕМ КАРТИНКУ ЗАКАТА ДЛЯ АВАТАРКИ АВТОРА
+    const AVATAR_URL = "https://i.ibb.co/pPzFmRK/931.jpg"; 
+    let user = JSON.parse(localStorage.getItem('sl_user'));
+    let isAdmin = localStorage.getItem('sl_adm') === 'true';
+
+    // Хранилище (имитация базы данных для простоты)
+    let posts = JSON.parse(localStorage.getItem('sl_posts_cloud')) || [];
+
+    window.onload = () => {
+        if(user) { hideM('reg-m'); render(); }
+        if(isAdmin) document.getElementById('admin-add').style.display = 'block';
+    };
+
+    function saveUser() {
+        const n = document.getElementById('reg-name').value.trim();
+        if(n) {
+            user = { name: n, id: Date.now() };
+            localStorage.setItem('sl_user', JSON.stringify(user));
+            location.reload();
+        }
+    }
+
+    function checkAdm() {
+        if(document.getElementById('adm-pass').value === '123321') {
+            localStorage.setItem('sl_adm', 'true');
+            location.reload();
+        }
+    }
+
+    function uploadPost() {
+        const file = document.getElementById('p-file').files[0];
+        const text = document.getElementById('p-text').value;
+        if(!file) return alert("Выбери фото");
+
+        const btn = document.getElementById('up-btn');
+        btn.innerText = "Загрузка..."; btn.disabled = true;
+
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (e) => {
+            const newPost = {
+                id: Date.now(),
+                img: e.target.result,
+                text: text,
+                likes: []
+            };
+            posts.unshift(newPost);
+            // Сохраняем "в облако" (пока в локал, чтобы не упало от ошибок ключей)
+            localStorage.setItem('sl_posts_cloud', JSON.stringify(posts));
+            location.reload();
+        };
+    }
+
+    function render() {
+        const feed = document.getElementById('feed');
+        feed.innerHTML = posts.map(p => {
+            const isLiked = p.likes.includes(user.id);
+            return `
+            <div class="post">
+                <div class="post-header">
+                    <img src="${AVATAR_URL}" class="avatar">
+                    Автор Славянки
+                </div>
+                <img src="${p.img}" class="post-media" ondblclick="like(${p.id})">
+                <div class="post-info">
+                    <div class="actions">
+                        <span class="like-btn ${isLiked?'active':''}" onclick="like(${p.id})">${isLiked?'❤️':'🤍'}</span>
+                    </div>
+                    <div class="desc"><b>Автор_Славянки</b> ${p.text}</div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function like(id) {
+        const p = posts.find(x => x.id === id);
+        const idx = p.likes.indexOf(user.id);
+        if(idx === -1) p.likes.push(user.id); else p.likes.splice(idx, 1);
+        localStorage.setItem('sl_posts_cloud', JSON.stringify(posts));
+        render();
+    }
+
+    function showM(id) { document.getElementById(id).style.display = 'flex'; }
+    function hideM(id) { document.getElementById(id).style.display = 'none'; }
+</script>
+</body>
+</html>
